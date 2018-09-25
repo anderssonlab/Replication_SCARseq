@@ -1,7 +1,7 @@
 ## ./find_breakpoints_smooth.sh ../Okazaki_data/Okazaki_mm10_r1_F.nodup.bw ../Okazaki_data/Okazaki_mm10_r1_R.nodup.bw 1000 20 20 results mm10.chrom.sizes
 
 ##Usage: find_breakpoints_smooth.sh F.bw R.bw window_size smooth_radius derivative_radius zero_crossing_radius outdir chrom_sizes
-##Calls: RFD_smooth.repart.pl
+##Calls: partition_smooth.pl
 
 FWD=$1
 REV=$2
@@ -44,7 +44,7 @@ wait
 
 ## Calculate RFD, derivative and boundary scores
 for CHR in $( cut -f 1 $CHROM | sort | uniq ); do
-	./RFD_smooth.repart.pl ${OUT}/${CHR}_windows_F_CPM.tab ${OUT}/${CHR}_windows_R_CPM.tab $RADIUS $DRADIUS $ZRADIUS > ${OUT}/${CHR}_windows_RFD.txt &
+	./partition_smooth.pl ${OUT}/${CHR}_windows_F_CPM.tab ${OUT}/${CHR}_windows_R_CPM.tab $RADIUS $DRADIUS $ZRADIUS > ${OUT}/${CHR}_windows_RFD.txt &
 done
 wait
 
