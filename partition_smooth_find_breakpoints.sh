@@ -1,6 +1,6 @@
-## ./find_breakpoints_smooth.sh ../Okazaki_data/Okazaki_mm10_r1_F.nodup.bw ../Okazaki_data/Okazaki_mm10_r1_R.nodup.bw 1000 20 20 results mm10.chrom.sizes
+## ./partition_smooth_find_breakpoints ../data/partition_mm10_r1_F.nodup.bw ../data/partition_mm10_r1_R.nodup.bw 1000 20 20 results mm10.chrom.sizes
 
-##Usage: find_breakpoints_smooth.sh F.bw R.bw window_size smooth_radius derivative_radius zero_crossing_radius outdir chrom_sizes
+##Usage: partition_smooth_find_breakpoints.sh F.bw R.bw window_size smooth_radius derivative_radius zero_crossing_radius outdir chrom_sizes
 ##Calls: partition_smooth.pl
 
 FWD=$1
