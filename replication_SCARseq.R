@@ -170,7 +170,7 @@ filtered.data <- data.Ok[sapply(b.data[,4], function(x) {
 #write.table(filtered.data,file="RFD/filtered_s30_3000boundaries0.9_cpm0.3.txt",quote = F,sep="\t",col.names = F,row.names = F)
 
 
-#### process Ok-seq initiation zone file ####
+#### signal around Ok-seq initiation zones ####
 ok_break <- read.table(file.path(server,data_dir,"RFD/filtered_s30_3000boundaries0.9_cpm0.3.txt"),sep="\t",header=FALSE,as.is=TRUE) 
 colnames(ok_break) <- c("chr","start","end","F","R","F.cpm","R.cpm","RFD.raw","RFD","RFD.deriv","score","zero.deriv","CPM")
 ok_break$mid <- rowMeans(ok_break[,c("start","end")])
@@ -218,7 +218,6 @@ data.break.gr$break_ID <- ok.ext.gr$ID[queryHits(overlap_pairs)] # initiation zo
 data.break.gr$dist <- start(data.break.gr) - ok.ext.gr$break_start[queryHits(overlap_pairs)]
 #data.break.gr$dist <- round_any(data.break.gr$dist,1000) # for enhancer midpoints
 
-
 data.mean.df <- data.frame(data.break.gr %>% data.frame %>% 
                              dplyr::group_by(dist,mark,type) %>%  # rank, enh_active
                              dplyr::summarise(#RFD_sd = sd(RFD,na.rm = T),
@@ -238,23 +237,6 @@ data.mean.df <- data.frame(data.break.gr %>% data.frame %>%
 
 data.mean.df$dist <- data.mean.df$dist / 1000 # convert to kb
 
-# for permutation of random regions (figure )
-#data.list[[i]] <- data.mean.df
-#data.list.df <- do.call(rbind,data.list)
-#data.list.df <-  data.frame(data.list.df %>% 
-#                              dplyr::group_by(dist) %>% 
-#                              dplyr::summarise(mark="random",
-#                                               enh_active.frac =mean(enh_active.frac),
-#                                               enh.frac = mean(enh.frac),
-#                                               TADborder.frac = mean(TADborder.frac),
-#                                               DHS.frac = mean(DHS.frac),
-#                                               tss_act.frac = mean(tss_act.frac),
-#                                               tss.frac = mean(tss.frac),
-#                                               CTCF.frac =mean(CTCF.frac),
-#                                               IZ.frac =mean(IZ.frac),
-#                                               IZran.frac =mean(IZran.frac)))
-#data.mean.df$scaled <- ifelse(data.mean.df$mark %in% c("K20m16","K36m16","K20m13","K36m13"),"FALSE","TRUE")
-
 ggplot(data=subset(data.mean.df,!is.na(mut))) + 
   geom_line(aes(colour=factor(rank),dist,RFD)) + #alpha=rep
   #geom_smooth(aes(colour=mark),size=0.4) + #alpha=rep
@@ -270,35 +252,8 @@ pdf("SCAR_RDF_100kb_enhancer_pr.rep_wOverlap.pdf") # ,height = 7,width = 5
 print(plot)
 dev.off()
 
-#data.mean.df <- rbind(data.list.df,data.mean.df)
-data.mean.m <- melt(data.mean.df[,c(1,2,5,6)],id.vars = c("dist","mark"))
-#data.mean.m <- melt(data.mean.df[,c(1:2,7:14)],id.vars = c("dist","mark"))
-ggplot(data=subset(data.mean.m,!variable %in% "IZran.frac"),aes(dist,value)) + 
-  #geom_line(aes(dist,F.LR-R.LR),colour="grey") +
-  geom_line(aes(colour=variable)) + #alpha=rep
-  #geom_smooth(aes(colour=mark),size=0.4) + #alpha=rep
-  #geom_smooth(aes(dist,F.LR-R.LR)) + # colour=rep
-  #facet_wrap(~ variable,scale="free_y",ncol=2) +
-  #geom_hline(yintercept = 0.001306092,linetype=2) +
-  theme_minimal() +
-  scale_colour_manual(values=c(my.pal[c(5,6,1,2)])) +
-  #scale_colour_brewer(palette = my.cols[]) + #
-  scale_alpha_manual(values=c(my.pal)) +
-  #coord_cartesian(ylim =  c(-0.003,0.003))  +
-  xlab("Distance (kb) from IZ")
-ggsave("TADborder_fraction_atIZ_av20kb_1Mb.pdf")
 
-#ran.200kb.df <- data.list.df
-## Commulative fraction 
-#qt.gr <- data.gr[!is.na(data.gr$RFD.extreme)]
-qt.gr <- subset(data.gr,RFD.clust %in% c(1,7,4))
-#qt.gr <- c(qt.gr,sample(data.gr[is.na(data.gr$RFD.extreme)],50000))
-
-qt.gr$mark[is.na(qt.gr$RFD.extreme)] <- "random"
-qt.gr$dist <- round_any(distanceToNearest(qt.gr,Enh.gr)@elementMetadata$distance,1000)
-
-
-#### Identify initiation zone edges ####
+#### identify initiation zone edges ####
 # based on min/max OK-seq data
 data.break.ok.df <- data.frame(data.break.gr[data.break.df$type=="Ok",]) # subset to OKseq
 data.ok_F <- data.break.ok.df[data.break.ok.df$dist>0,] # downstream
@@ -317,126 +272,60 @@ ok_min <- data.frame(data.ok_R %>%
                                         RFDedge = min(RFD),
                                         dist = dist[which.min(RFD)]))
 
-# for logLR test
-#data.break.df <- data.frame(data.break.gr)
-#data.break.df$RFD[data.break.df$LR_pass=="fail"] <- NA
-##data.break.df$RFD[data.break.df$LR_top10==F] <- NA
-#data.break.df$IZpos <- data.break.df$dist>0
-#mark_extreme <- data.frame(data.break.df[!is.na(data.break.df$RFD),] %>% 
-#                       dplyr::group_by(break_ID,type,IZpos) %>%
-#                       dplyr::summarise(IDmax = ID[which.max(RFD)],
-#                                        maxR = max(RFD),
-#                                        minR = min(RFD),
-#                                        distmax = dist[which.max(RFD)],
-#                                        IDmin = ID[which.min(RFD)],
-#                                        distmin = dist[which.min(RFD)]))
-
-
 ok_extreme <- rbind(ok_max,ok_min)
+data.extreme <- data.break.df[which(data.break.df$ID %in% ok_extreme$ID),] # all data at initiation zone edges (two bins pr. initiation zone)
 
-# Set NA for RFD not passing logLR
-#data.break.df <- data.frame(data.break.gr)
-#data.break.df$RFD[data.break.df$LR_pass=="fail"] <- NA
-#data.break.df$RFD[data.break.df$LR_top10==FALSE] <- NA
+#### statistical test ####
+data.break.df <- data.frame(data.break.gr)
+data.extreme.min <- data.break.df[which(data.break.df$ID %in% ok_min$ID),]
+data.extreme.max <- data.break.df[which(data.break.df$ID %in% ok_max$ID),]
 
-data.extreme <- data.break.df[which(data.break.df$ID %in% ok_extreme$ID),]
+RFD.mat.min <- dcast(data.extreme.min, break_ID ~ type, value.var = "RFD", fun.aggregate = mean)
+RFD.mat.max <- dcast(data.extreme.max, break_ID ~ type, value.var = "RFD", fun.aggregate = mean)
 
+# define samples to test
+RFD.mat.min <- RFD.mat.min[,colnames(RFD.mat.min) %in% c("break_ID","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K36m13_1","K36m16_1","K36m13_2","K36m16_2","K20m13_1","K20m16_1","K20m13_2","K20m16_2","K5m13_1","K5m16_1","K5m13_2","K5m16_2","Ok")]
+RFD.mat.max <- RFD.mat.max[,colnames(RFD.mat.max) %in% c("break_ID","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K36m13_1","K36m16_1","K36m13_2","K36m16_2","K20m13_1","K20m16_1","K20m13_2","K20m16_2","K5m13_1","K5m16_1","K5m13_2","K5m16_2","Ok")]
 
-#### IZ distance and size (figure S2B,C) ####
-#ok_extreme <- read.table("Ok_IZ_wOverlap_wEdgeVal.txt")
+# perform a Wilcoxon Rank Sum test in samples partitions
+w.pval <- list() 
+for (nr_mark in 3:ncol(RFD.mat.min)) { # 
+  w.pval[colnames(RFD.mat.min)[nr_mark]] <- wilcox.test(RFD.mat.min[,nr_mark],RFD.mat.max[,nr_mark],paired = T)$p.value #,alternative = c("g"))
+}
+w.test.df <- data.frame(pvalue=unlist(w.pval))
+w.test.df$type <- rownames(w.test.df)
+w.test.df$mark <- sapply(strsplit(as.character(w.test.df$type),"_"),"[",1)
+
+# bar plot on p-values
+ggplot(subset(w.test.df,!mark %in% c("Ok","proseq","input","K5par","K20par")), aes(type,-log10(pvalue))) +
+  geom_bar(stat="identity", position="dodge",aes(fill=mark),alpha=0.8) +
+  theme_minimal() + 
+  geom_hline(yintercept = c(-log10(0.01),-log10(0.05)),colour="red",size=0.2) +
+  scale_fill_manual(values = my.pal) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5)) 
+ggsave("P.values.w.test_min_vs_max_smoothRFD.pdf")
+
+# boxplot on smoothed partition at edges (figure 1D, S3C, S3E, S5E, S7B)
+RFD.mat.min$stand_rep <- "lagging"
+RFD.mat.max$stand_rep <- "leading"
+RFD.mat <- rbind(RFD.mat.min, RFD.mat.max)
+
+mat_m <- melt(RFD.mat)
+mat_m$stand_rep <- factor(mat_m$stand_rep,levels=c("leading","lagging"))
+ggplot(data=subset(mat_m,!variable %in% c("K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4")), aes(variable,value)) + # ,"K36_1","K36_3","K36_4"
+  #geom_violin(aes(fill=stand_rep),alpha=0.8,outlier.shape = NA) + #outlier.shape = NA
+  geom_boxplot(aes(fill=stand_rep),alpha=0.8,outlier.shape = NA,notch = 1) + #outlier.shape = NA
+  scale_fill_manual(values=my.pal[c(1,5)]) +
+  coord_cartesian(ylim=c(-0.55,0.55)) +
+  theme_minimal() +  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggsave("RFD.smooth_min.max.RFDsmooth.dist100kb.pdf")
+
+#### IZ distance and size ####
+# figure S2B, C
 ok_extreme <- merge(ok_max,ok_min,by="break_ID",suffixes = c(".max",".min"))
 ok_extreme$size <- ok_extreme$dist.max - ok_extreme$dist.min
 ok_extreme$score <- ok.gr$score[match(ok_extreme$break_ID,ok.gr$ID)]
 ok_extreme$DeltaRFD <- ok_extreme$RFDedge.max - ok_extreme$RFDedge.min
-
-#ok.dist <- distanceToNearest(ok.gr)
-#distnace_ok <- data.frame(dist=ok.dist@elementMetadata$distance,
-#                          break_ID = ok.gr$ID[queryHits(ok.dist)])
-#ok_extreme$neaest <- distnace_ok$dist[match(ok_extreme$break_ID,distnace_ok$break_ID)]
-#
-#TAD.dist <- distanceToNearest(ok.gr,TAD.border.gr)
-#distnace_TAD <- data.frame(dist=TAD.dist@elementMetadata$distance,
-#                          break_ID = ok.gr$ID[queryHits(TAD.dist)])
-#ok_extreme$TADdist <- distnace_TAD$dist[match(ok_extreme$break_ID,distnace_TAD$break_ID)]
-#
-#TSSactive.dist <- distanceToNearest(ok.gr,ES_annot.gr[ES_annot.gr$activity=="active"])
-#distnace_actTSS <- data.frame(dist=TSSactive.dist@elementMetadata$distance,
-#                           break_ID = ok.gr$ID[queryHits(TSSactive.dist)])
-#ok_extreme$TSS1dist <- distnace_actTSS$dist[match(ok_extreme$break_ID,distnace_actTSS$break_ID)]
-#
-#TSSinactive.dist <- distanceToNearest(ok.gr,ES_annot.gr[ES_annot.gr$activity=="inactive"])
-#distnace_inactTSS <- data.frame(dist=TSSinactive.dist@elementMetadata$distance,
-#                              break_ID = ok.gr$ID[queryHits(TSSinactive.dist)])
-#ok_extreme$TSS2dist <- distnace_inactTSS$dist[match(ok_extreme$break_ID,distnace_inactTSS$break_ID)]
-#
-#Enh.dist <- distanceToNearest(ok.gr,Enh_SE.gr[Enh_SE.gr$active!="inactive" & !is.na(Enh_SE.gr$active)])
-#distnace_Enh <- data.frame(dist=Enh.dist@elementMetadata$distance,
-#                                break_ID = ok.gr$ID[queryHits(Enh.dist)])
-#ok_extreme$Enhdist <- distnace_Enh$dist[match(ok_extreme$break_ID,distnace_Enh$break_ID)]
-#
-#ok_extreme$TAD <- ifelse(ok_extreme$TADdist<15000,T,F)
-#ok_extreme$TSS_active <- ifelse(ok_extreme$TSS1dist<15000,T,F)
-#ok_extreme$TSS_inactive <- ifelse(ok_extreme$TSS2dist<15000,T,F)
-#ok_extreme$Enh <- ifelse(ok_extreme$Enhdist<15000,T,F)
-#
-#ok_extreme$K20m13score <- data_mean$score[match(interaction(ok_extreme$break_ID,"K20m13"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20m13min <- data_mean$RFD[match(interaction(ok_extreme$ID.min,"K20m13"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20m13max <- data_mean$RFD[match(interaction(ok_extreme$ID.max ,"K20m13"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20m13Delta <- ok_extreme$K20m13max - ok_extreme$K20m13min
-#
-#ok_extreme$K20m16score <- data_mean$score[match(interaction(ok_extreme$break_ID,"K20m16"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20m16min <- data_mean$RFD[match(interaction(ok_extreme$ID.min,"K20m16"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20m16max <- data_mean$RFD[match(interaction(ok_extreme$ID.max ,"K20m16"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20m16Delta <- ok_extreme$K20m16max - ok_extreme$K20m16min
-#
-#ok_extreme$K20score <- data_mean$score[match(interaction(ok_extreme$break_ID,"K20"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20min <- data_mean$RFD[match(interaction(ok_extreme$ID.min,"K20"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20max <- data_mean$RFD[match(interaction(ok_extreme$ID.max ,"K20"),interaction(data_mean$ID,data_mean$mark))]
-#ok_extreme$K20Delta <- ok_extreme$K20max - ok_extreme$K20min
-#
-#ok_extreme$K20_rank <- findInterval(ok_extreme$K20score,median(ok_extreme$K20score,na.rm=T))
-#ok_extreme$K20m13_rank <- findInterval(ok_extreme$K20m13score,median(ok_extreme$K20m13score,na.rm=T))
-#ok_extreme$K20m16_rank <- findInterval(ok_extreme$K20m16score,median(ok_extreme$K20m16score,na.rm=T))
-#ok_extreme$Ok_rank <- findInterval(ok_extreme$score,median(ok_extreme$score,na.rm=T))
-#
-#ok_extreme <- ok_extreme[order(ok_extreme$score,decreasing = T),]
-#ok_extreme$rank <- seq(1:nrow(ok_extreme))
-#
-#fract_df <- data.frame(ok_extreme %>% dplyr::group_by(Ok_rank) %>%
-#                         dplyr::summarise(TAD_frac = length(which(TAD)==T)/length(TAD),
-#                                   TSS_active_frac = length(which(TSS_active)==T)/length(TSS_active),
-#                                   TSS_inactive_frac = length(which(TSS_inactive)==T)/length(TSS_inactive),
-#                                   Enh_frac = length(which(Enh)==T)/length(Enh)))
-#K20m13_fract_df <- data.frame(ok_extreme[!is.na(ok_extreme$K20m13_rank),] %>% dplyr::group_by(K20m13_rank) %>% # [is.na(ok_extreme$K20m13_rank),]
-#                         dplyr::summarise(TAD_frac = length(which(TAD)==T)/length(TAD),
-#                                          TSS_active_frac = length(which(TSS_active)==T)/length(TSS_active),
-#                                          TSS_inactive_frac = length(which(TSS_inactive)==T)/length(TSS_inactive),
-#                                          Enh_frac = length(which(Enh)==T)/length(Enh)))
-#K20m16_fract_df <- data.frame(ok_extreme[!is.na(ok_extreme$K20m16_rank),] %>% dplyr::group_by(K20m16_rank) %>% # [is.na(ok_extreme$K20m16_rank),] 
-#                         dplyr::summarise(TAD_frac = length(which(TAD)==T)/length(TAD),
-#                                          TSS_active_frac = length(which(TSS_active)==T)/length(TSS_active),
-#                                          TSS_inactive_frac = length(which(TSS_inactive)==T)/length(TSS_inactive),
-#                                          Enh_frac = length(which(Enh)==T)/length(Enh)))
-#K20_fract_df <- data.frame(ok_extreme[!is.na(ok_extreme$K20_rank),] %>% dplyr::group_by(K20_rank) %>% # 
-#                         dplyr::summarise(TAD_frac = length(which(TAD)==T)/length(TAD),
-#                                          TSS_active_frac = length(which(TSS_active)==T)/length(TSS_active),
-#                                          TSS_inactive_frac = length(which(TSS_inactive)==T)/length(TSS_inactive),
-#                                          Enh_frac = length(which(Enh)==T)/length(Enh)))
-#colnames(fract_df)[1] <- colnames(K20m13_fract_df)[1] <- colnames(K20m16_fract_df)[1] <- colnames(K20_fract_df)[1] <- "rank"
-#fract_df <- rbind(fract_df,K20m13_fract_df,K20m16_fract_df,K20_fract_df)
-#fract_df$mark <- c("Ok","Ok","K20m13","K20m13","K20m16","K20m16","K20","K20")
-#fract_m <- melt(fract_df,id.vars = c("mark","rank"))
-#fract_enrich <- data.frame(enrichment = log2(fract_m$value[fract_m$rank==0]/fract_m$value[fract_m$rank==1]),
-#                           mark = fract_m$mark[fract_m$rank==1],
-#                           feature = fract_m$variable[fract_m$rank==1])
-#
-#ggplot(fract_enrich,aes(mark,enrichment)) + 
-#  geom_bar(stat="identity",position="dodge",aes( fill=factor(rank))) + #
-#  facet_wrap(~feature) + 
-#  scale_fill_manual(values = my.pal[c(1,2,7,5,6,7,8)],na.value = "grey") +
-#  theme_minimal()
-#ggsave("IZ_K20_wt_mut_cut.equal_score_rank_vs_feature15kb_enrichment_Overlap.pdf")
-
 
 
 #### example regions ####
@@ -531,29 +420,7 @@ gene_annot@range[is.na(gene_annot@range$feature)]
 
 
 #### input bias based on logLR track ####
-K5_3_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K5_r3_teg_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K5_4_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K5_r4_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K20_1_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K20_2_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K20_3_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20_r3_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36_1_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36_3_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36_r3_merge_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36_4_LR  <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36_r4_merge_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-
-K20m6_1_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20me2_316_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K20m6_2_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20me2_316_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36m6_1_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36me3_316_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36m6_2_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36me3_316_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE) 
-K5m6_1_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K5_316_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K5m6_2_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K5_316_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE) 
-
-K20m3_1_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20_313_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K20m3_2_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K20_313_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36m3_1_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36_313_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K36m3_2_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K36_313_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K5m3_1_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K5_313_r1_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-K5m3_2_LR <- read.table(file.path(server,data_dir,"/macs2_files/bin_results/K5_313_r2_smooth_logLR_smooth_results_w1000_s30_d30_z1.txt"),fill=T,sep="\t",header=FALSE,as.is=TRUE)
-
+# load files similar to "load data" and store into logLR_data
 logLR_data <- rbind(data.frame(K5_3_LR,type=rep("K5_3",times=nrow(K5_3_LR))),
                     data.frame(K5_4_LR,type=rep("K5_4",times=nrow(K5_4_LR))),
                     data.frame(K20_1_LR,type=rep("K20_1",times=nrow(K20_1_LR))),
@@ -574,7 +441,6 @@ logLR_data <- rbind(data.frame(K5_3_LR,type=rep("K5_3",times=nrow(K5_3_LR))),
                     data.frame(K5m3_2_LR,type=rep("K5m13_2",times=nrow(K5m3_2_LR))),
                     data.frame(K5m6_1_LR,type=rep("K5m16_1",times=nrow(K5m6_1_LR))),
                     data.frame(K5m6_2_LR,type=rep("K5m16_2",times=nrow(K5m6_2_LR))))
-rm(list=c("K36_3_LR","K36_4_LR","K36_1_LR","K20_3_LR","K20_2_LR","K20_1_LR","K5_3_LR","K5_4_LR","K20m6_1_LR","K20m6_2_LR","K36m6_1_LR","K36m6_2_LR","K20m3_1_LR","K20m3_2_LR","K36m3_1_LR","K36m3_2_LR","K5m6_1_LR","K5m6_2_LR","K5m3_1_LR","K5m3_2_LR"))
 colnames(logLR_data) <- c("chr","start","end","sumF","meanF","sumR","meanR","RFD.raw","RFD","RFD.deriv","score","zero.deriv","type")
 
 logLR_data$mid <- rowMeans(logLR_data[,c("start","end")])
@@ -820,122 +686,6 @@ pheatmap(cor_mat,
          cluster_rows = T, cluster_cols = F,
          filename = "K36wt_FE_K36encode_bigwig_pearson_cor_bs1kb_col2.pdf",
          show_rownames = T, show_colnames = T)
-
-#### statistical test ####
-data.extreme.min <- data.break.df[which(data.break.df$ID %in% ok_min$ID),]
-data.extreme.max <- data.break.df[which(data.break.df$ID %in% ok_max$ID),]
-
-RFD.mat.min <- dcast(data.extreme.min, break_ID ~ type, value.var = "RFD", fun.aggregate = mean)
-RFD.mat.max <- dcast(data.extreme.max, break_ID ~ type, value.var = "RFD", fun.aggregate = mean)
-
-# alternative for LR
-#data.break.df$edgeID <- ifelse(data.break.df$ID %in% ok_min$ID | data.break.df$ID %in% ok_max$ID,T,F)
-data.break.df$minID <- ifelse(data.break.df$ID %in% ok_min$ID,T,F)
-data.break.df$maxID <- ifelse(data.break.df$ID %in% ok_max$ID,T,F)
-
-data.break.df$IZpos <- ifelse(data.break.df$dist > 0,"lead","lag")
-closest_df <- data.frame(data.break.df %>% 
-                           dplyr::group_by(type,break_ID,IZpos,type) %>%
-                           dplyr::summarise(min_dist = min(abs(start[LR_pass=="pass"] - start[minID==T])),
-                                            which_min_dist = ifelse(!is.null(which.min(abs(start[LR_pass=="pass"] - start[minID==T]))),which.min(abs(start[LR_pass=="pass"] - start[minID==T])),NA),
-                                            min_ID = ifelse(!is.null(ID[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[minID==T]))]),
-                                                            ID[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[minID==T]))],NA),
-                                            min_RFD =ifelse(!is.null(RFD[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[minID==T]))]),
-                                                            RFD[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[minID==T]))],NA),
-                                            max_dist = min(abs(start[LR_pass=="pass"] - start[maxID==T])),
-                                            max_ID = ifelse(!is.null(ID[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[maxID==T]))]),
-                                                            ID[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[maxID==T]))],NA),
-                                            max_RFD =ifelse(!is.null(RFD[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[maxID==T]))]),
-                                                            RFD[LR_pass=="pass"][which.min(abs(start[LR_pass=="pass"] - start[maxID==T]))],NA)))
-
-RFD.mat.min <- dcast(closest_df[closest_df$IZpos=="lag",], break_ID ~ type, value.var = "min_RFD", fun.aggregate = mean)
-RFD.mat.max <- dcast(closest_df[closest_df$IZpos=="lead",], break_ID ~ type, value.var = "max_RFD", fun.aggregate = mean)
-
-# for IZ with overlap
-RFD.mat.min <- RFD.mat.min[which(RFD.mat.min$break_ID %in% RFD.mat.max$break_ID),]
-RFD.mat.max <- RFD.mat.max[which(RFD.mat.max$break_ID %in% RFD.mat.min$break_ID),]
-
-RFD.mat.min <- RFD.mat.min[,colnames(RFD.mat.min) %in% c("break_ID","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K36m13_1","K36m16_1","K36m13_2","K36m16_2","K20m13_1","K20m16_1","K20m13_2","K20m16_2","K5m13_1","K5m16_1","K5m13_2","K5m16_2","Ok")]
-RFD.mat.max <- RFD.mat.max[,colnames(RFD.mat.max) %in% c("break_ID","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K36m13_1","K36m16_1","K36m13_2","K36m16_2","K20m13_1","K20m16_1","K20m13_2","K20m16_2","K5m13_1","K5m16_1","K5m13_2","K5m16_2","Ok")]
-
-#data.frame(RFD.mat.max$K20_1,RFD.mat.max$K20_1) %>% apply(.,1, function(x) length(which(is.na(x)))) %>% table
-
-#RFD.mat.min <- RFD.mat.min[which(RFD.mat.min$ID %in% intersect(RFD.mat.min$ID,RFD.mat.max$ID)),]
-#RFD.mat.max <- RFD.mat.max[which(RFD.mat.max$ID %in% intersect(RFD.mat.max$ID,RFD.mat.min$ID)),]
-
-w.pval <- list() 
-#diff <- t.test <- t.pval <- list() 
-for (nr_mark in 3:ncol(RFD.mat.min)) { # 
-  w.pval[colnames(RFD.mat.min)[nr_mark]] <- wilcox.test(RFD.mat.min[,nr_mark],RFD.mat.max[,nr_mark],paired = T)$p.value #,alternative = c("g"))
-}
-w.test.df <- data.frame(pvalue=unlist(w.pval))
-#write.table(w.test.df,file="all_samples_RFD.closest_pass_LRpass_closestToEdge_200Kb_IZ.smooth_w.test.pdf")
-write.table(w.test.df,file="all_samples_inclK5mut_logLRpass_Edge_200Kb_IZ.smooth_w.test.pdf")
-
-#w.test_LR.df <- read.table("all_samples_RFD.LRpass_200Kb_IZ.smooth_w.test.txt")
-#w.test_LR.df$type <- rownames(w.test_LR.df)
-#w.test_LR.df$test <- "passRFD"
-
-#w.test_RFD.df <- read.table("all_samples_RFD_200Kb_IZ.smooth_w.test.txt")
-#w.test_RFD.df$test <- "RFD"
-
-#w.test.df$test <- "nearRFD"
-#w.test.df <- do.call(rbind,list(w.test.df,w.test_LR.df,w.test_RFD.df[,c(1,2,4)]))
-
-#ggplot(data.extreme, aes(RFD)) +
-#  geom_density(aes(fill=type),alpha=0.2,size=0.2) +
-#  theme_minimal() + 
-#  coord_cartesian(xlim = c(-1,1)) +
-#  facet_wrap(~mark,ncol=1,scale="free_y")
-##ggsave("RFD.breakspoints.smooth.destributio.min.max.dist.RFD.threshold.pdf",width = 6,height = 9)
-
-w.test.df$type <- rownames(w.test.df)
-w.test.df$mark <- sapply(strsplit(as.character(w.test.df$type),"_"),"[",1)
-w.test.df$type <- factor(w.test.df$type,levels=c("Ok","cage","proseq_r1","proseq_r2","rnaseq_r1","rnaseq_r2","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K5par","K20par","K20m16_1","K20m16_2","K36m16_1","K36m16_2","K20m13_1","K20m13_2","K36m13_1","K36m13_2","K5m13_1","K5m13_2","K5m16_1","","K5m16_2","input_1","input_2","input_3","input_m","input_m16","input_m13"))
-ggplot(subset(w.test.df,!mark %in% c("Ok","proseq","input","K5par","K20par")), aes(type,-log10(pvalue))) +
-  geom_bar(stat="identity", position="dodge",aes(fill=mark),alpha=0.8) +
-  theme_minimal() + 
-  geom_hline(yintercept = c(-log10(0.01),-log10(0.05)),colour="red",size=0.2) +
-  scale_fill_manual(values = my.pal) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5)) 
-ggsave("P.values.w.test_min_vs_max_smoothRFD_dist100kb_data0.3CPM_hline0.05_smoothRFD_LRclosest_original_wK5mut.pdf")
-
-write.table(subset(w.test.df, test != "passRFD" & !mark %in% c("Ok","proseq","input","K5par","K20par")),file="W.test.Allsamples.txt",sep="\t",quote = F)
-#source("/Users/mariadalby/Documents/scripts/R/ggplot_smooth_func.R")
-#data.extreme_plot <- data.trim[data.trim$mark %in% c("K5","Ok"),]
-#data.joint <- left_join(data.extreme_plot,data.extreme_plot, by=c("ID"))
-#ggplot(data.joint, aes(RFD.x,RFD.y)) +
-#  geom_hex(bins=90) +
-#  #geom_point(aes(colour=exprs.y),size=0.1) +
-#  geom_smooth(se=F,method="lm",size=0.2,colour="red") +
-#  #stat_smooth_func(geom="text",method="lm",hjust=0,parse=TRUE,size=3) +
-#  scale_colour_continuous(low="yellow",high="blue",trans="log10") +
-#  facet_grid(type.y ~ type.x,scales = "free") + 
-#  xlab("Repartition") + ylab("Repartition") +
-#  theme_minimal()
-#ggsave("RFD.raw.trim500.K4_Ok.pdf") # ,width=15, height = 15
-
-RFD.mat.min$stand_rep <- "lagging"
-RFD.mat.max$stand_rep <- "leading"
-RFD.mat <- rbind(RFD.mat.min, RFD.mat.max)
-#RFD.mat$stand_rep <- ifelse(RFD.mat$Ok>0,"leading","lagging")
-#RFD.mat <- RFD.mat[!is.na(RFD.mat$stand_rep),]
-
-#LR.mat$stand_rep <- ifelse(RFD.mat$Ok>0,"leading","lagging")
-#LR.mat <- LR.mat[!is.na(LR.mat$stand_rep),]
-
-mat_m <- melt(RFD.mat)#[,-c(2,4,8,14:20)])
-#mat_m <- melt(RFD.mat[,-c(14:16)])
-mat_m$stand_rep <- factor(mat_m$stand_rep,levels=c("leading","lagging"))
-mat_m$variable <- factor(mat_m$variable,levels=c("Ok","proseq_r1","proseq_r2","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K5par","K20par","K20m16_1","K20m16_2","K36m16_1","K36m16_2","K20m13_1","K20m13_2","K36m13_1","K36m13_2","input_1","input_2","input_3","input_m","input_m16","input_m13","K5m16_1","K5m16_2","K5m13_1","K5m13_2"))
-mat_m$variable <- factor(mat_m$variable,levels=c("Ok","proseq_r1","proseq_r2","K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4","K5par","K20par","K5m16_1","K5m16_2","K20m16_1","K20m16_2","K36m16_1","K36m16_2","K5m13_1","K5m13_2","K20m13_1","K20m13_2","K36m13_1","K36m13_2","input_1","input_2","input_3","input_m","input_m16","input_m13"))
-ggplot(data=subset(mat_m,!variable %in% c("K5_3","K5_4","K20_1","K20_2","K20_3","K36_1","K36_3","K36_4")), aes(variable,value)) + # ,"K36_1","K36_3","K36_4"
-  #geom_violin(aes(fill=stand_rep),alpha=0.8,outlier.shape = NA) + #outlier.shape = NA
-  geom_boxplot(aes(fill=stand_rep),alpha=0.8,outlier.shape = NA,notch = 1) + #outlier.shape = NA
-  scale_fill_manual(values=my.pal[c(1,5)]) +
-  coord_cartesian(ylim=c(-0.55,0.55)) +
-  theme_minimal() +  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-ggsave("RFD.smooth_min.max.RFDsmooth.dist100kb_wK5mut_ylim0.55_mutOrder_logLRclosest.pdf")
 
 #### define mutant shifts ####
 data.mut <- read.table("RFD/results/res_K36_r1_smooth_results_w1000_s30_d30_z1.txt",header=FALSE,as.is=TRUE,sep="\t",fill=TRUE)
@@ -1928,10 +1678,9 @@ ggplot(ok.enh.df,aes(RFD.y,RFD.x)) +
 overlaps <- findOverlaps(ok.gr,enhES.gr,maxgap = 2000)
 length(unique(subjectHits(overlaps)))
 
-#### Simulate full RFD ####
+#### simulate full RFD ####
 # scale mutant partition to max OKseq RFD range to test the effect of MCM2 mutant on RFD
 dataOK.gr <- data.gr[data.gr$mark=="Ok"]
 maxRFD <- max(max(dataOK.gr$RFD, abs(min(dataOK.gr$RFD))))
 data.gr$RFDscale <- data.gr$RFD 
 data.gr$RFDscale[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] <- data.gr$RFD[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] / maxRFD
-
