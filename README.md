@@ -10,6 +10,6 @@ For all SCAR-seq data, run partition_smooth_find_breakpoints.sh	with partition_s
 
 Input signal files to both RFD_smooth_find_breakpoints.sh and partition_smooth_find_breakpoints.sh should be strand seperated bigWig files.
 
-Finally, the replication_SCARseq.R file stores the commands used to process the binned signal, including most analysis and plots for the paper.
+Finally, the replication_SCARseq.R file stores the commands used to process the binned signal, including most analysis and plots for the paper. Worth noticing is that the smoothed SCAR-seq partition or smoothed OK-seq RFD values are all referred to as a common "RFD" collumn. Raw (non-smoothed) SCAR-seq partition or OK-seq RFD values are referred to as "RFD.raw"
 
 Contact: Maria (maria@binf.ku.dk)
