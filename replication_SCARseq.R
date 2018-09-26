@@ -760,44 +760,6 @@ border.func <- function(gr) {
 U.border.gr <- border.func(U.gr)
 
 #### distantce enrichment ####
-# random regions
-library("BSgenome.Mmusculus.UCSC.mm10")
-chr_size <- list()
-for (i in myseqnames){
-  chr_size[[i]] <- length(BSgenome.Mmusculus.UCSC.mm10[[i]])
-}
-
-#loop through number of regions
-ran_chr <- ran_start <- ran_end  <- vector()
-neg_gr
-span = 300
-for(i in 1:100000){ # length(y.gr)
-  ran_chr[i] <- sample(x=myseqnames,size=1)
-  my_max <- chr_size[[ran_chr[i]]]-span
-  ran_start[i] <- runif(n=1, min=1, max=my_max)
-  ran_end[i] <- ran_start[i] + span
-}
-ran.gr <- GRanges(ran_chr,IRanges(ran_start,ran_end))
-ran.gr <- subsetByOverlaps(ran.gr,neg_gr,invert=T)
-
-# CAGE TSSs
-start(ES_annot.gr) <- round_any(ES_annot.gr$peakStart,1000,f=floor)
-end(ES_annot.gr) <- start(ES_annot.gr) + 1000
-# CAGE enhanhcers
-start(Enh.gr) <- round_any(Enh.gr$peakStart,1000,f=floor)
-end(Enh.gr) <- start(Enh.gr) + 1000
-#Enh_ext.gr <- resize(Enh.gr,1000, fix = "center")
-
-cage <- read.table(file.path(server,data_dir,"/RFD/results/res_mESCAGE_smooth_results_w1000_s30_d30_z1.txt"),sep="\t",header=FALSE,as.is=TRUE)
-colnames(cage) <- c("chr","start","end","F","R","F.cpm","R.cpm","RFD.raw","RFD","RFD.deriv","score","zero.deriv")
-cage.gr <- makeGRangesFromDataFrame(cage,
-                                    seqnames.field="chr",
-                                    start.field = "start",
-                                    end.field = "end",
-                                    keep.extra.columns = T)
-cage.gr <- subsetByOverlaps(cage.gr,neg_gr,invert=T)
-cage.gr <- subsetByOverlaps(cage.gr,neg_gr,invert=T)
-cage.gr <- subset(cage.gr, seqnames %in% myseqnames)
 
 # nearest enrichments
 x.gr <- ok.gr
@@ -805,6 +767,7 @@ x.gr <- ok.gr
 
 #load(file.path(data_dir,"RFD/shiftGR_mcm2_mut313_r2.RDat"))
 y.gr <- unique(TF.gr[,0]) # shift.gr
+
 # define background set
 #background.gr <- cage.gr[-(subjectHits(findOverlaps(y.gr,cage.gr)))]
 background.gr <- unique(data.gr[data.gr$annotation=="Promoter" & !data.gr$ID %in% y.gr$ID][,0])
@@ -1022,17 +985,24 @@ data.gr$TADborder[queryHits(TAD_ovarlap)] <-  TAD.border.gr$Compartment[subjectH
 #data.gr$TADborder <- FALSE
 #data.gr$TADborder[queryHits(TAD_ovarlap)] <- TRUE
 
-## Compare genome and data annot
+#### Compare genome background and data annotation ####
+# figure S1C, S2D, S8B
+
+# load 1kb binned genome coordinates
 genome.df <- read.table(file.path(server,data_dir,"/macs2_files/mm10_w1000.bed"),sep="\t",header=FALSE,as.is=TRUE)
 genome.gr <- makeGRangesFromDataFrame(genome.df,
                                       seqnames.field = "V1",
                                       start.field = "V2",
                                       end.field = "V3",
                                       keep.extra.columns = T)
+# use standard chromosomes
 genome.gr <- subset(genome.gr, seqnames %in% myseqnames)
-genome.gr <- subset(genome.gr, start > 3000000)
+
+# enclude non-mappable regions
+genome.gr <- subset(genome.gr, start > 3000000) 
 genome.gr <- subsetByOverlaps(genome.gr,neg_gr,invert=T)
 
+# annotate genomic background
 txdb <- TxDb.Mmusculus.UCSC.mm10.knownGene
 genome_annot.gr <- annotatePeak(genome.gr, tssRegion=c(-1,1),
                          TxDb=txdb, annoDb="org.Mm.eg.db", level="transcript",
@@ -1043,27 +1013,8 @@ genome_annot.gr$annotation_cur[grep("exon",genome_annot.gr$annotation)] <- "exon
 genome_annot.gr$annotation_cur[grep("intron",genome_annot.gr$annotation)] <- "intron"
 genome_annot.gr$annotation_simple <- ifelse(genome_annot.gr$annotation_cur %in% c("intron","exon","exon_other","3' UTR","5' UTR","Promoter"),"gene","intergenic")
 
-# Fisher test K36 genic 
-K36wt.gr <- subset(data.gr, mark == "K36")
-K36wt_annot.gr <- annotatePeak(K36wt.gr[,0], tssRegion=c(-1,1),
-                               TxDb=txdb, annoDb="org.Mm.eg.db", level="transcript",
-                               sameStrand = FALSE, overlap="all")@anno
-
-K36wt_annot.gr$annotation_cur <- K36wt_annot.gr$annotation
-K36wt_annot.gr$annotation_cur[grep("exon",K36wt_annot.gr$annotation)] <- "exon"
-K36wt_annot.gr$annotation_cur[grep("intron",K36wt_annot.gr$annotation)] <- "intron"
-K36wt_annot.gr$annotation_simple <- ifelse(K36wt_annot.gr$annotation_cur %in% c("intron","exon","exon_other","3' UTR","5' UTR","Promoter"),"gene","intergenic")
-
-con_mat <- matrix(c(length(K36wt_annot.gr[K36wt_annot.gr$annotation_simple == "gene"]),
-                  length(genome_annot.gr[genome_annot.gr$annotation_simple == "gene"]),
-                  length(K36wt_annot.gr[K36wt_annot.gr$annotation_simple == "intergenic"]),
-                  length(genome_annot.gr[genome_annot.gr$annotation_simple == "intergenic"])),
-                  nrow=2,ncol=2,byrow = T)
-fisher.test(con_mat)
-
-# genome and data annotation
-#annot_genome <- read.table(file.path(data_dir,"annot_genome.txt"))
-
+# initiation zone vs. data annotation (figure S2D)
+# initiation zone (data.Ok) as gRange
 IZ.gr$annotation_cur <- IZ.gr$annotation
 IZ.gr$annotation_cur[grep("exon",IZ.gr$annotation)] <- "exon"
 IZ.gr$annotation_cur[grep("intron",IZ.gr$annotation)] <- "intron"
@@ -1684,3 +1635,4 @@ dataOK.gr <- data.gr[data.gr$mark=="Ok"]
 maxRFD <- max(max(dataOK.gr$RFD, abs(min(dataOK.gr$RFD))))
 data.gr$RFDscale <- data.gr$RFD 
 data.gr$RFDscale[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] <- data.gr$RFD[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] / maxRFD
+                                      
