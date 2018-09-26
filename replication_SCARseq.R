@@ -554,8 +554,6 @@ ggplot(w.pval_df,aes(type,-log10(active))) +
 # data.extreme <- data.trim[which(data.trim$ID %in% ok_top.gr$ID),]
 exprs.mat <- dcast(data.extreme, ID ~ type, value.var = "exprs", fun.aggregate = mean)
 RFD.mat <- dcast(data.extreme, ID ~ type, value.var = "RFD", fun.aggregate = mean)
-#LR.mat <- dcast(data.extreme, ID ~ type, value.var = "LR.diff", fun.aggregate = mean)
-#trend.mat <- dcast(data.break.df, ID ~ mark, value.var = "RFD.trend", fun.aggregate = max)
 mat <- data.frame(RFD.mat,exprs=exprs.mat[,-1])
 
 ggplot(mat, aes(Ok,K20m13_1)) +
@@ -1635,4 +1633,4 @@ dataOK.gr <- data.gr[data.gr$mark=="Ok"]
 maxRFD <- max(max(dataOK.gr$RFD, abs(min(dataOK.gr$RFD))))
 data.gr$RFDscale <- data.gr$RFD 
 data.gr$RFDscale[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] <- data.gr$RFD[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] / maxRFD
-                                      
+
