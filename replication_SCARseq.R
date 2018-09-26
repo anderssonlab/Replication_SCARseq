@@ -142,6 +142,7 @@ data.gr <- data.gr[-queryHits(neg.overlap)]
 
 # filter based on coverage
 data.gr <- subset(data.gr,CPM>=0.3) # & exprs>=500
+## loaded file
 
 #### define Ok breakpoints ####
 data.Ok <- read.table("RFD/results/Okazaki_smooth_results_w1000_s30_d30_z1.txt",header=FALSE,as.is=TRUE,sep="\t",fill=TRUE) # output from RFD_smooth_find_breakpoints.sh
@@ -223,17 +224,6 @@ data.mean.df <- data.frame(data.break.gr %>% data.frame %>%
                              dplyr::summarise(#RFD_sd = sd(RFD,na.rm = T),
                                   RFD.raw = mean(RFD.raw, na.rm = T),
                                   RFD = mean(RFD,na.rm = T)))
-
-#DI = mean(DI,na.rm = T),
-#enh_active.frac = length(which(enhancer=="active" | enhancer=="inter")) / length(enhancer),#7354, #  length(which((data.gr$enhancer=="active" | data.gr$enhancer=="inter") & data.gr$mark=="Ok"))
-#enh.frac = length(which(enhancer=="active" | enhancer=="inter" | enhancer=="inactive")) / length(enhancer),#7354, #  length(which((data.gr$enhancer=="active" | data.gr$enhancer=="inter") & data.gr$mark=="Ok"))# 41969,# length(which(data.gr$enhancer!=F & data.gr$mark=="Ok")),
-#TADborder.frac = length(which(TADborder==T)) / length(TADborder),#7906,# length(which(data.gr$TADborder!=F & data.gr$mark=="Ok")),
-#DHS.frac = length(which(DHS==T)) / length(DHS),# length(which(data.gr$DHS==T & data.gr$mark=="Ok")),
-#tss_act.frac = length(which(annotation=="Promoter" & RNA_active == TRUE)) / length(annotation),
-#tss.frac = length(which(annotation=="Promoter")) / length(annotation),#24801, # length(which(data.gr$annotation=="Promoter" & data.gr$mark=="Ok")),
-#CTCF.frac = length(which(CTCF==T)) / length(CTCF),#125374, #length(which(data.gr$CTCF==T & data.gr$mark=="Ok")),
-#IZ.frac = length(which(IZ==T)) /  length(IZ),#2844 )) #length(which(data.gr$IZ==T & data.gr$mark=="Ok"))))
-#IZran.frac = length(which(RanIZ==T)) /  length(RanIZ)))#CTCF_TSS.frac = length(which(CTCF==TRUE & annotation=="Promoter")) / length(CTCF)
 
 data.mean.df$dist <- data.mean.df$dist / 1000 # convert to kb
 
@@ -1633,4 +1623,3 @@ dataOK.gr <- data.gr[data.gr$mark=="Ok"]
 maxRFD <- max(max(dataOK.gr$RFD, abs(min(dataOK.gr$RFD))))
 data.gr$RFDscale <- data.gr$RFD 
 data.gr$RFDscale[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] <- data.gr$RFD[-which(data.gr$mark %in% c("K20m16","K36m16","K20m13","K36m13"))] / maxRFD
-
