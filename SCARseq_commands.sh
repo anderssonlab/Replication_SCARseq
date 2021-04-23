@@ -10,7 +10,7 @@ nice nohup chipseq.py histone files.json  -species mm10 -final_stage filt_bam > 
 disown # important to add after command
 
 # Split into forward and reverse from SE data
-for file in K36_NS_r1_chr_filt.nodup.bam; do
+for file in *.nodup.bam; do
     base=$( basename $file | sed -e "s/.nodup.bam//" )
     samtools view -F 20 -h ${file} | samtools view -Sb -h > ${base}_F.nodup.bam
     samtools view -f 16 -h ${file} | samtools view -Sb -h > ${base}_R.nodup.bam
